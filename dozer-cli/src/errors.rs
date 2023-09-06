@@ -102,6 +102,8 @@ pub enum OrchestrationError {
     LockedOutdatedLockfile,
     #[error("{LOCK_FILE} does not exist. `--locked` requires a lock file.")]
     LockedNoLockFile,
+    #[error("Reqwest error: {0}")]
+    Reqwest(#[from] reqwest::Error),
 }
 
 #[derive(Error, Debug)]

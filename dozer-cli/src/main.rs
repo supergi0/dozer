@@ -249,7 +249,7 @@ fn parse_and_generate() -> Result<Cli, OrchestrationError> {
 
         if let Commands::Init = cli.cmd {
             Telemetry::new(None, None);
-            if let Err(e) = generate_config_repl() {
+            if let Err(e) = tokio::runtime::Runtime::new().unwrap().block_on(generate_config_repl()) {
                 error!("{}", e);
                 Err(e)
             } else {

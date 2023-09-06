@@ -70,6 +70,13 @@ impl Completer for InitHelper {
     }
 }
 
+async fn get_options_from_url(url: &str) -> Result<String, OrchestrationError> {
+    let response = reqwest::get(url).await?.error_for_status()?.text().await?;
+    let text = response.trim().to_string();
+
+    Ok(text)
+}
+
 pub fn generate_connection(connection_name: &str) -> Connection {
     match connection_name {
         "Snowflake" | "snowflake" | "S" | "s" => {
@@ -171,7 +178,7 @@ type Question = (
     String,
     Box<dyn Fn((String, &mut Config)) -> Result<(), OrchestrationError>>,
 );
-pub fn generate_config_repl() -> Result<(), OrchestrationError> {
+pub async fn generate_config_repl() -> Result<(), OrchestrationError> {
     let mut rl = Editor::<InitHelper, DefaultHistory>::new()
         .map_err(|e| OrchestrationError::CliError(CliError::ReadlineError(e)))?;
     rl.set_helper(Some(InitHelper {}));
@@ -207,8 +214,7 @@ pub fn generate_config_repl() -> Result<(), OrchestrationError> {
             }),
         ),
         (
-            "question: Connection Type - one of: [P]ostgres, [E]thereum, [S]nowflake, [My]SQL, [S3]Storage, [Mo]ngoDB: "
-                .to_string(),
+            get_options_from_url("https://dozer-init-template.s3.ap-southeast-1.amazonaws.com/options").await?,
             Box::new(move |(connection, config)| {
                 let sample_connection = generate_connection(&connection);
                 config.connections.push(sample_connection);
