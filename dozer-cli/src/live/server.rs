@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use std::path::Path;
 use dozer_api::{tonic_reflection, tonic_web, tower_http};
 use dozer_types::{
     grpc_types::{
@@ -96,6 +97,20 @@ impl ContractService for ContractServer {
     }
 }
 
+pub struct TempDirectory {
+    temp_dir: Option<tempdir::TempDir>,
+}
+
+impl TempDirectory {
+    pub fn new() -> Self {
+        let temp_dir = tempdir::TempDir::new("live").unwrap();
+        Self { temp_dir: Some(temp_dir) }
+    }
+    pub fn path(&self) -> &Path {
+        self.temp_dir.as_ref().unwrap().path()
+    }
+}
+
 struct LiveServer {
     receiver: Receiver<ConnectResponse>,
     state: Arc<LiveState>,
@@ -144,8 +159,10 @@ impl CodeService for LiveServer {
     async fn run(&self, request: Request<RunRequest>) -> Result<Response<Labels>, Status> {
         let req = request.into_inner();
         let state = self.state.clone();
+        let temp_dir = TempDirectory::new();
+        let temp_dir = temp_dir.path().to_str().unwrap();
         info!("Starting dozer");
-        match state.run(req).await {
+        match state.run(req,temp_dir).await {
             Ok(labels) => {
                 let labels = labels
                     .into_labels()
